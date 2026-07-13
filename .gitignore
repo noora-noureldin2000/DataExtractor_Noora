@@ -1,0 +1,16 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+output/markdown/*
+output/extracted_images/*
+output/results/*
+!output/markdown/.gitkeep
+!output/extracted_images/.gitkeep
+!output/results/.gitkeep
+.vscode/
+.idea/
+*.log
