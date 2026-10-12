@@ -15,11 +15,16 @@ class ModelBackend(str, Enum):
 class CloudProvider(str, Enum):
     ANTHROPIC = "anthropic"
     GEMINI = "gemini"
+    MUSE = "muse"
 
 
 def get_available_backends() -> list[ModelBackend]:
     backends = [ModelBackend.LOCAL]
-    if settings.ANTHROPIC_API_KEY or settings.GOOGLE_API_KEY:
+    if (
+        settings.ANTHROPIC_API_KEY
+        or settings.GOOGLE_API_KEY
+        or settings.OPENCODE_API_KEY
+    ):
         backends.append(ModelBackend.CLOUD)
     return backends
 
@@ -49,12 +54,14 @@ def _query_local(prompt: str, image_paths: Optional[list[str | Path]]) -> str:
 
 def _query_cloud(prompt: str, image_paths: Optional[list[str | Path]]) -> str:
     provider = CloudProvider(settings.CLOUD_PROVIDER)
-    from models.cloud import query_claude, query_gemini
+    from models.cloud import query_claude, query_gemini, query_muse
 
     try:
         if provider == CloudProvider.ANTHROPIC:
             return query_claude(prompt, image_paths)
-        return query_gemini(prompt, image_paths)
+        if provider == CloudProvider.GEMINI:
+            return query_gemini(prompt, image_paths)
+        return query_muse(prompt, image_paths)
     except Exception as e:
         logger.error(f"Cloud model ({provider.value}) query failed: {e}")
         raise ModelQueryError(str(e)) from e

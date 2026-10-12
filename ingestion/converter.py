@@ -21,6 +21,8 @@ class DoclingConverter:
         self.doc_name = self.pdf_path.stem
         self.markdown_dir = settings.MARKDOWN_DIR / self.doc_name
         self.images_dir = settings.IMAGES_DIR / self.doc_name
+        self.pagemap_path: Path | None = None
+        self.figure_ocr_path: Path | None = None
         self.markdown_dir.mkdir(parents=True, exist_ok=True)
         self.images_dir.mkdir(parents=True, exist_ok=True)
 
@@ -45,6 +47,9 @@ class DoclingConverter:
         )
 
     def convert(self) -> str:
+        from ingestion.ocr_setup import verify_ocr_prerequisites
+
+        verify_ocr_prerequisites(settings.TESSERACT_CMD)
         logger.info(f"Converting PDF: {self.pdf_path}")
         result = self.converter.convert(self.pdf_path)
         doc = result.document
@@ -57,7 +62,31 @@ class DoclingConverter:
         md_path.write_text(markdown_text, encoding="utf-8")
         logger.info(f"Markdown saved: {md_path}")
         logger.info(f"Images extracted: {len(image_map)} to {self.images_dir}")
+
+        self._build_page_map()
+        self._run_figure_ocr()
         return str(md_path)
+
+    def _build_page_map(self) -> None:
+        """Per-page text map via pdf-inspector (or PyMuPDF) + Tesseract for scanned pages."""
+        try:
+            from ingestion.page_mapper import PageMapper
+
+            mapper = PageMapper(self.pdf_path, self.markdown_dir)
+            self.pagemap_path = mapper.build()
+        except Exception as e:
+            logger.warning(f"Page mapping skipped (non-fatal): {e}")
+            self.pagemap_path = None
+
+    def _run_figure_ocr(self) -> None:
+        """Dedicated Tesseract OCR on exported figures to capture embedded text."""
+        try:
+            from ingestion.figure_ocr import run_figure_ocr
+
+            self.figure_ocr_path = run_figure_ocr(self.images_dir, self.doc_name)
+        except Exception as e:
+            logger.warning(f"Figure OCR skipped (non-fatal): {e}")
+            self.figure_ocr_path = None
 
     def _extract_images(self, doc) -> dict[str, str]:
         image_counter = 0

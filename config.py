@@ -18,6 +18,12 @@ class Settings:
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-exp-03-25")
 
+    OPENCODE_API_KEY: str = os.getenv("OPENCODE_API_KEY", "")
+    OPENCODE_API_BASE: str = os.getenv(
+        "OPENCODE_API_BASE", "https://opencode.ai/zen/go/v1"
+    )
+    OPENCODE_MODEL: str = os.getenv("OPENCODE_MODEL", "muse-spark-1.3-contributor")
+
     CLOUD_PROVIDER: str = os.getenv("CLOUD_PROVIDER", "anthropic")
 
     DEFAULT_CORR: float = float(os.getenv("DEFAULT_CORR", "0.5"))

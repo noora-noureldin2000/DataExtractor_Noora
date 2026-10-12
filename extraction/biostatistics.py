@@ -11,6 +11,7 @@ class DichotomousData:
     group_label: str
     events: int
     total: int
+    variable: Optional[str] = None
     source_page: Optional[int] = None
 
     @property
@@ -22,6 +23,7 @@ class DichotomousData:
 class ContinuousData:
     group_label: str
     n: int
+    variable: Optional[str] = None
     mean: Optional[float] = None
     sd: Optional[float] = None
     median: Optional[float] = None

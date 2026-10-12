@@ -41,6 +41,14 @@ def main():
         help="Skip PDF ingestion and use existing markdown",
     )
     parser.add_argument(
+        "--chunk-size", type=int, default=35000,
+        help="Max characters per document chunk for thorough end-to-end extraction (default: 35000)",
+    )
+    parser.add_argument(
+        "--chunk-overlap", type=int, default=2000,
+        help="Character overlap between consecutive chunks (default: 2000)",
+    )
+    parser.add_argument(
         "--template", "-t", type=str, default=None,
         help="Path to extraction template (.xlsx or .csv) for structured export",
     )
@@ -70,20 +78,33 @@ def main():
             logger.error(f"Skipped ingestion but no existing markdown at {md_path}")
             sys.exit(1)
         logger.info(f"Using existing markdown: {md_path}")
+        pagemap_path = md_path.parent / f"{pdf_path.stem}_pagemap.json"
+        pagemap_path = pagemap_path if pagemap_path.exists() else None
+        figure_ocr_path = images_dir / f"{pdf_path.stem}_figure_ocr.json"
+        figure_ocr_path = figure_ocr_path if figure_ocr_path.exists() else None
     else:
         logger.info("Step 1: Ingesting PDF to Markdown...")
         converter = DoclingConverter(pdf_path)
         md_path = Path(converter.convert())
         images_dir = converter.images_dir
+        pagemap_path = converter.pagemap_path
+        figure_ocr_path = converter.figure_ocr_path
 
     # Step 2: Extract clinical variables
     logger.info("Step 2: Extracting clinical variables...")
-    engine = ExtractionEngine(md_path, images_dir)
+    engine = ExtractionEngine(
+        md_path,
+        images_dir,
+        pagemap_path=pagemap_path,
+        figure_ocr_path=figure_ocr_path,
+    )
     result = engine.extract(
         variables=args.variables,
         population_filter=args.population,
         arm_filter=args.arm,
         process_graphs=not args.no_graphs,
+        chunk_chars=args.chunk_size,
+        chunk_overlap=args.chunk_overlap,
     )
 
     # Step 3: Export results as JSON

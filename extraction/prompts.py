@@ -7,11 +7,12 @@ Extraction Guidelines:
 4. MEDIAN/IQR: If only Median and IQR are reported, extract those and note sample size.
 5. NCT NUMBERS: Look for ClinicalTrials.gov identifiers (NCTxxxxxxxx).
 6. ARM/POPULATION: Identify all intervention arms and note which population/subgroup they apply to.
+7. CHUNKED DOCUMENT: The text below is ONE CHUNK of a longer document (all chunks are processed in order, so the full study is covered). The chunk may start or end mid-section. Extract ONLY values explicitly present in this chunk's text. Never invent or estimate values. If nothing matches in this chunk, return an empty arms list.
 
 User-defined extraction variables:
 {variables_json}
 
-Document text:
+Document chunk {chunk_context}:
 {document_text}
 
 Respond with JSON only in this format:
@@ -65,6 +66,11 @@ For bar/line charts:
 - Note error bars (SD, SE, or CI) if present
 
 Extract all visible numerical values precisely as they appear on the figure.
+
+Tesseract OCR was run on this figure and captured embedded text (axis labels, tick values, data labels, in-figure table cells). Use this OCR text to VERIFY your reading of exact digits and labels. When your visual reading conflicts with the OCR text, prefer the value supported by the OCR text unless it is clearly a segmentation artifact.
+
+OCR text from this figure:
+{ocr_text}
 
 User-defined extraction variables:
 {variables_json}

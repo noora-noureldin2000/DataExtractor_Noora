@@ -62,6 +62,88 @@ def query_gemini(
     return response.text
 
 
+def query_muse(
+    prompt: str,
+    image_paths: Optional[list[str | Path]] = None,
+) -> str:
+    """Query Muse Spark via the OpenCode Go subscription (Responses API)."""
+    import httpx
+
+    if not settings.OPENCODE_API_KEY:
+        raise ValueError(
+            "OPENCODE_API_KEY must be set (your OpenCode Go subscription key "
+            "from the Zen console) to use the muse provider"
+        )
+
+    content: list[dict] = [{"type": "input_text", "text": prompt}]
+    if image_paths:
+        for img_path in image_paths:
+            b64 = _encode_image(img_path)
+            media_type = _infer_media_type(img_path)
+            content.append(
+                {
+                    "type": "input_image",
+                    "image_url": f"data:{media_type};base64,{b64}",
+                }
+            )
+
+    base = settings.OPENCODE_API_BASE.rstrip("/")
+    logger.info(
+        f"Querying Muse model: {settings.OPENCODE_MODEL} via OpenCode Go"
+    )
+    with httpx.Client(timeout=600.0) as client:
+        response = client.post(
+            f"{base}/responses",
+            headers={"Authorization": f"Bearer {settings.OPENCODE_API_KEY}"},
+            json={
+                "model": settings.OPENCODE_MODEL,
+                "input": [{"role": "user", "content": content}],
+                "max_output_tokens": 8192,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    return _parse_responses_output(data)
+
+
+def _parse_responses_output(data: dict) -> str:
+    """Extract text from a Responses API payload (plus gateway fallbacks)."""
+    texts: list[str] = []
+    output = data.get("output")
+    if isinstance(output, list):
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "message":
+                for part in item.get("content") or []:
+                    if (
+                        isinstance(part, dict)
+                        and part.get("type") == "output_text"
+                        and part.get("text")
+                    ):
+                        texts.append(part["text"])
+            elif isinstance(item.get("text"), str) and item["text"]:
+                texts.append(item["text"])
+    if texts:
+        return "".join(texts)
+    if isinstance(data.get("output_text"), str) and data["output_text"]:
+        return data["output_text"]
+    choices = data.get("choices") or []
+    if choices:
+        message = choices[0].get("message") or {}
+        content = message.get("content")
+        if isinstance(content, str) and content:
+            return content
+        if isinstance(content, list):
+            joined = "".join(
+                part.get("text", "") for part in content if isinstance(part, dict)
+            )
+            if joined:
+                return joined
+    raise ValueError(f"Muse response contained no text output: {data}")
+
+
 def _infer_media_type(path: str | Path) -> str:
     ext = Path(path).suffix.lower()
     mapping = {
