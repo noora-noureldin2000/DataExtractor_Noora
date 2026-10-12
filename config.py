@@ -18,7 +18,9 @@ class Settings:
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-pro-exp-03-25")
 
-    OPENCODE_API_KEY: str = os.getenv("OPENCODE_API_KEY", "")
+    OPENCODE_API_KEY: str = os.getenv("OPENCODE_API_KEY", "") or os.getenv(
+        "OPENCODE_GO_API_KEY", ""
+    )
     OPENCODE_API_BASE: str = os.getenv(
         "OPENCODE_API_BASE", "https://opencode.ai/zen/go/v1"
     )
